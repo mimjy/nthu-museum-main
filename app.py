@@ -29,13 +29,18 @@ def index():
     if not google_creds_str:
         return 'hello world, GOOGLE_CREDENTIALS: NOT SET', 200
 
-    info = f"len={len(google_creds_str)}, head={repr(google_creds_str[:20])}, tail={repr(google_creds_str[-20:])}"
     try:
         creds_dict = json.loads(google_creds_str)
-        keys = list(creds_dict.keys()) if isinstance(creds_dict, dict) else f"(parsed but not a dict: {type(creds_dict).__name__})"
-        return f'hello world, GOOGLE_CREDENTIALS: valid JSON, {info}, keys={keys}', 200
     except json.JSONDecodeError as e:
-        return f'hello world, GOOGLE_CREDENTIALS: INVALID JSON ({e}), {info}', 200
+        return f'hello world, GOOGLE_CREDENTIALS: INVALID JSON ({e})', 200
+
+    try:
+        gc = gspread.service_account_from_dict(creds_dict)
+        sh = gc.open('清大文物館_Bot資料庫')
+        titles = [ws.title for ws in sh.worksheets()]
+        return f'hello world, GOOGLE_CREDENTIALS: valid JSON, gc.open() OK, sheet title="{sh.title}", worksheets={titles}', 200
+    except Exception as e:
+        return f'hello world, GOOGLE_CREDENTIALS: valid JSON, gc.open() FAILED: {type(e).__name__}: {e}', 200
 
 """
 # --- 2. 設定 Google Sheets 連線 & 時區 ---
