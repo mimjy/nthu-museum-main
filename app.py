@@ -24,7 +24,9 @@ VERIFY_PASSWORD = "123"
 
 @app.route("/", methods=['GET'])
 def index():
-    return 'hello world', 200
+    creds = os.getenv('GOOGLE_CREDENTIALS')
+    status = f"len={len(creds)}, starts_with={creds[:15]}..." if creds else "NOT SET"
+    return f'hello world, GOOGLE_CREDENTIALS: {status}', 200
 
 """
 # --- 2. 設定 Google Sheets 連線 & 時區 ---
