@@ -20,10 +20,25 @@ app = Flask(__name__)
 # --- 1. 設定 LINE & 密碼 ---
 configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 line_handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
-VERIFY_PASSWORD = "123" 
+VERIFY_PASSWORD = "123"
 
-# --- 2. 設定 Google Sheets 連線 & 時區 ---
 google_creds_str = os.getenv('GOOGLE_CREDENTIALS')
+
+@app.route("/", methods=['GET'])
+def index():
+    if not google_creds_str:
+        return 'hello world, GOOGLE_CREDENTIALS: NOT SET', 200
+
+    info = f"len={len(google_creds_str)}, head={repr(google_creds_str[:20])}, tail={repr(google_creds_str[-20:])}"
+    try:
+        creds_dict = json.loads(google_creds_str)
+        keys = list(creds_dict.keys()) if isinstance(creds_dict, dict) else f"(parsed but not a dict: {type(creds_dict).__name__})"
+        return f'hello world, GOOGLE_CREDENTIALS: valid JSON, {info}, keys={keys}', 200
+    except json.JSONDecodeError as e:
+        return f'hello world, GOOGLE_CREDENTIALS: INVALID JSON ({e}), {info}', 200
+
+"""
+# --- 2. 設定 Google Sheets 連線 & 時區 ---
 if google_creds_str:
     creds_dict = json.loads(google_creds_str)
     gc = gspread.service_account_from_dict(creds_dict)
@@ -320,3 +335,4 @@ if __name__ == "__main__":
 @app.route("/", methods=['GET'])
 def index():
     return 'Bot is running!', 200
+"""
