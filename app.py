@@ -30,11 +30,6 @@ if google_creds_str:
 else:
     gc = gspread.service_account(filename='credentials.json')
 
-@app.route("/", methods=['GET'])
-def index():
-    return 'hello world', 200
-
-"""
 sh = gc.open('清大文物館_Bot資料庫')
 sheet_q = sh.worksheet('題庫')
 sheet_s = sh.worksheet('玩家狀態')
@@ -325,4 +320,3 @@ if __name__ == "__main__":
 @app.route("/", methods=['GET'])
 def index():
     return 'Bot is running!', 200
-"""
