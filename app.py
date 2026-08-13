@@ -17,16 +17,16 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__)
 
-@app.route("/", methods=['GET'])
-def index():
-    return 'hello world', 200
-
-"""
 # --- 1. 設定 LINE & 密碼 ---
 configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 line_handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 VERIFY_PASSWORD = "123"
 
+@app.route("/", methods=['GET'])
+def index():
+    return 'hello world', 200
+
+"""
 # --- 2. 設定 Google Sheets 連線 & 時區 ---
 google_creds_str = os.getenv('GOOGLE_CREDENTIALS')
 if google_creds_str:
