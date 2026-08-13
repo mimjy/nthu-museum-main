@@ -17,10 +17,15 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__)
 
+@app.route("/", methods=['GET'])
+def index():
+    return 'hello world', 200
+
+"""
 # --- 1. 設定 LINE & 密碼 ---
 configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 line_handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
-VERIFY_PASSWORD = "123" 
+VERIFY_PASSWORD = "123"
 
 # --- 2. 設定 Google Sheets 連線 & 時區 ---
 google_creds_str = os.getenv('GOOGLE_CREDENTIALS')
@@ -34,7 +39,7 @@ sh = gc.open('清大文物館_Bot資料庫')
 sheet_q = sh.worksheet('題庫')
 sheet_s = sh.worksheet('玩家狀態')
 
-MAX_STAGE = 8 
+MAX_STAGE = 8
 tz = timezone(timedelta(hours=8))
 
 # --- 3. 展區資料定義 ---
@@ -140,7 +145,7 @@ def get_user_data(user_id):
     if user_id in users:
         row = users.index(user_id) + 1
         data = sheet_s.row_values(row)
-        while len(data) < 8: data.append("0") 
+        while len(data) < 8: data.append("0")
         return row, data
     else:
         sheet_s.append_row([user_id, 0, "", "", "", "", "", "0"])
@@ -150,15 +155,15 @@ def get_random_q_and_update_used(zone, used_str):
     records = sheet_q.get_all_records()
     pool = [r for r in records if str(r.get('展區', '')) == str(zone)]
     if not pool:
-        return None, used_str 
+        return None, used_str
     used_list = used_str.split("|||") if used_str else []
     avail = [q for q in pool if str(q.get('題目', '')) not in used_list]
     if not avail:
         zone_titles = [str(q.get('題目', '')) for q in pool]
         used_list = [u for u in used_list if u not in zone_titles]
-        avail = pool 
+        avail = pool
     picked = random.choice(avail)
-    used_list.append(str(picked['題目'])) 
+    used_list.append(str(picked['題目']))
     return picked, "|||".join(used_list)
 
 # --- 6. 事件處理 ---
@@ -174,17 +179,17 @@ def callback():
 def handle_message(event):
     user_id = event.source.user_id
     user_msg = event.message.text.strip()
-    
+
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         row_idx, u_data = get_user_data(user_id)
-        
+
         curr_stage = str(u_data[1])
         correct_ans = str(u_data[2]).upper()
         used_qs = str(u_data[4])
-        last_play_date = str(u_data[5]) 
-        wallet_str = str(u_data[6])     
-        mistakes = int(u_data[7]) if str(u_data[7]).isdigit() else 0 
+        last_play_date = str(u_data[5])
+        wallet_str = str(u_data[6])
+        mistakes = int(u_data[7]) if str(u_data[7]).isdigit() else 0
         today_str = datetime.now(tz).strftime('%Y-%m-%d')
         reply_msgs = []
 
@@ -209,8 +214,8 @@ def handle_message(event):
 
         # --- 開始挑戰 ---
         elif user_msg == "開始挑戰" or user_msg == "重新挑戰":
-            sheet_s.update_cell(row_idx, 2, "Rules_Read") 
-            sheet_s.update_cell(row_idx, 8, 0) 
+            sheet_s.update_cell(row_idx, 2, "Rules_Read")
+            sheet_s.update_cell(row_idx, 8, 0)
             rule_text = (
                 "【挑戰規則說明】\n\n"
                 "1. 成功通關8道題目即可獲得一張兌換卷，將自動存入「我的兌換卷」。\n"
@@ -226,7 +231,7 @@ def handle_message(event):
             ))
 
         elif user_msg == "確認規則並開始":
-            sheet_s.update_cell(row_idx, 2, "Intro_1") 
+            sheet_s.update_cell(row_idx, 2, "Intro_1")
             reply_msgs.append(create_zone_flex(1))
 
         # --- 確認開始答題 或 抽下一題挑戰 ---
@@ -236,7 +241,7 @@ def handle_message(event):
                 zone = int(curr_stage.split("_")[1])
             elif curr_stage.isdigit():
                 zone = (int(curr_stage) + 1) // 2
-            
+
             q_data, new_used_qs = get_random_q_and_update_used(zone, used_qs)
             if q_data:
                 # 若是從介紹頁進入，設定關卡號碼；若是抽下一題，則關卡號碼不變
@@ -244,8 +249,8 @@ def handle_message(event):
                 sheet_s.update_cell(row_idx, 2, new_stage)
                 sheet_s.update_cell(row_idx, 3, str(q_data['正確答案']).upper())
                 sheet_s.update_cell(row_idx, 4, str(q_data.get('提示', '')))
-                sheet_s.update_cell(row_idx, 5, new_used_qs) 
-                
+                sheet_s.update_cell(row_idx, 5, new_used_qs)
+
                 reply_msgs.append(create_question_flex(q_data))
                 if str(q_data.get('提示', '')).strip():
                     reply_msgs.append(TextMessage(text=f"提示：{q_data['提示']}"))
@@ -262,8 +267,8 @@ def handle_message(event):
                         reply_msgs.append(create_wallet_flex(wallet_str))
                     else:
                         new_wallet = wallet_str + f",{today_str}:No" if wallet_str else f"{today_str}:No"
-                        sheet_s.update_cell(row_idx, 6, today_str) 
-                        sheet_s.update_cell(row_idx, 7, new_wallet) 
+                        sheet_s.update_cell(row_idx, 6, today_str)
+                        sheet_s.update_cell(row_idx, 7, new_wallet)
                         reply_msgs.append(TextMessage(text="恭喜！你已順利通關 8 道難題！\n已將今日的限量扭蛋兌換卷存入「我的兌換卷」中 🎁"))
                         reply_msgs.append(create_wallet_flex(new_wallet))
                 else:
@@ -288,12 +293,12 @@ def handle_message(event):
                 mistakes += 1
                 if mistakes >= 3:
                     sheet_s.update_cell(row_idx, 2, 0)
-                    sheet_s.update_cell(row_idx, 8, 0) 
+                    sheet_s.update_cell(row_idx, 8, 0)
                     fail_qr = QuickReply(items=[QuickReplyItem(action=MessageAction(label="重新挑戰", text="重新挑戰"))])
                     reply_msgs.append(TextMessage(text="挑戰失敗，進度已歸零。請重新觀察展品後，再次挑戰吧！", quick_reply=fail_qr))
                 else:
                     # 🌟 關鍵修改：答錯時不再自動抽題，而是提供按鈕
-                    sheet_s.update_cell(row_idx, 8, mistakes) 
+                    sheet_s.update_cell(row_idx, 8, mistakes)
                     retry_qr = QuickReply(items=[QuickReplyItem(action=MessageAction(label="抽下一題挑戰", text="抽下一題挑戰"))])
                     reply_msgs.append(TextMessage(
                         text=f"不對呦，剛剛那題的正確答案是 {correct_ans}。\n(目前錯誤次數：{mistakes}/3)\n\n請點擊下方按鈕繼續挑戰！",
@@ -316,7 +321,4 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
-    
-@app.route("/", methods=['GET'])
-def index():
-    return 'Bot is running!', 200
+"""
